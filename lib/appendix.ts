@@ -25,16 +25,22 @@ function won(value: number | null): string {
   return (value ?? 0).toLocaleString("ko-KR");
 }
 
+// 일반 공백(스페이스)을 전각 공백(U+3000)으로 바꾼다.
+// 이 글꼴은 일반 공백이 PDF 글자 층에서 '堺'로 저장돼 복사·검색하면 글자가 깨진다.
+// 전각 공백은 제대로 저장되고 화면에서 보이는 모양도 같다.
+const sp = (text: string) => text.replace(/ /g, "　");
+
 // 글자가 칸보다 길면 글자 크기를 줄여서 칸 안에 맞춘다.
 function drawFitted(
   page: PDFPage,
   font: PDFFont,
-  text: string,
+  rawText: string,
   x: number,
   y: number,
   maxWidth: number,
   size: number
 ) {
+  const text = sp(rawText);
   let fontSize = size;
   while (fontSize > 6 && font.widthOfTextAtSize(text, fontSize) > maxWidth) fontSize -= 0.5;
   page.drawText(text, { x, y, size: fontSize, font, color: rgb(0, 0, 0) });
@@ -62,7 +68,7 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
   const black = rgb(0, 0, 0);
 
   // 제목
-  const title = "별 지";
+  const title = sp("별 지");
   const titleSize = 22;
   page.drawText(title, {
     x: (PAGE_WIDTH - font.widthOfTextAtSize(title, titleSize)) / 2,
@@ -71,7 +77,7 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
     font,
     color: black,
   });
-  const subtitle = "양도채권의 명세";
+  const subtitle = sp("양도채권의 명세");
   page.drawText(subtitle, {
     x: (PAGE_WIDTH - font.widthOfTextAtSize(subtitle, 13)) / 2,
     y: PAGE_HEIGHT - MARGIN - 46,
@@ -87,12 +93,12 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
   page.drawText("채무자", { x: labelX, y, size: 12, font, color: black });
   drawFitted(page, font, record.name, valueX, y, contentWidth - 70, 12);
   y -= 24;
-  page.drawText("주  소", { x: labelX, y, size: 12, font, color: black });
+  page.drawText(sp("주 소"), { x: labelX, y, size: 12, font, color: black });
   drawFitted(page, font, record.address ?? "", valueX, y, contentWidth - 70, 12);
 
   // 단위 표시
   y -= 36;
-  const unit = "(단위: 원)";
+  const unit = sp("(단위: 원)");
   page.drawText(unit, {
     x: MARGIN + contentWidth - font.widthOfTextAtSize(unit, 10),
     y,
@@ -108,7 +114,7 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
     ["대출잔액", won(record.balance)],
     ["미수이자", won(record.accruedInterest)],
     ["연체이자", won(record.overdueInterest)],
-    ["합  계", won(record.total)],
+    ["합 계", won(record.total)],
   ];
   const rowHeight = 30;
   const labelWidth = 130;
@@ -141,7 +147,7 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
       });
     }
     const textY = rowTop - rowHeight / 2 - 4;
-    page.drawText(label, { x: MARGIN + 12, y: textY, size: 12, font, color: black });
+    page.drawText(sp(label), { x: MARGIN + 12, y: textY, size: 12, font, color: black });
 
     // 금액은 오른쪽 맞춤, 글자는 왼쪽 맞춤
     const isAmount = /^[\d,]+$/.test(value);
