@@ -48,3 +48,6 @@ next-env.d.ts
 원장/
 trash-can/
 *.pdf
+
+.vercel
+.env*
