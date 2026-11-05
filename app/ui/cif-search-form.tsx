@@ -3,7 +3,7 @@
 // 개발 단위 3·4·5: CIF 입력 → 조회 → 건 목록에서 1건 선택
 // 입력값 검사와 버튼 동작이 필요해서 클라이언트 컴포넌트로 만든다.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RecordList, { type RecordItem } from "@/app/ui/record-list";
 
 export default function CifSearchForm() {
@@ -13,13 +13,75 @@ export default function CifSearchForm() {
   const [records, setRecords] = useState<RecordItem[] | null>(null); // 조회된 건 목록
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null); // 고른 건
 
+  // 미리보기 상태 (단위 8)
+  const [previewUrl, setPreviewUrl] = useState(""); // 만들어진 PDF를 볼 수 있는 임시 주소
+  const [previewLoading, setPreviewLoading] = useState(false); // PDF를 만드는 중인지
+  const [previewError, setPreviewError] = useState(""); // PDF 만들기 실패 안내
+  const [notice, setNotice] = useState(""); // 확인 후 저장 버튼을 눌렀을 때의 안내
+  const previewUrlRef = useRef(""); // 화면을 떠날 때 임시 주소를 정리하기 위해 기억해 둔다.
+
+  // 화면을 떠날 때 임시 PDF 주소를 정리한다.
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    };
+  }, []);
+
+  // 미리보기를 지운다. (다른 건을 고르거나 새로 조회할 때)
+  function clearPreview() {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = "";
+    setPreviewUrl("");
+    setPreviewError("");
+    setNotice("");
+  }
+
+  // 다른 건을 고르면 이전 미리보기는 지운다.
+  function handleSelect(index: number) {
+    clearPreview();
+    setSelectedIndex(index);
+  }
+
+  // 선택한 건으로 양도증서 PDF를 만들어 미리보기에 보여 준다.
+  async function handlePreview() {
+    if (records === null || selectedIndex === null) return;
+    const record = records[selectedIndex];
+    clearPreview();
+    setPreviewLoading(true);
+    try {
+      const response = await fetch("/api/transfer-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cif: record.cif,
+          round: record.round,
+          institution: record.institution,
+          loanType: record.loanType,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setPreviewError(data?.message ?? "확인 필요: 미리보기를 만들지 못했습니다.");
+        return;
+      }
+      const url = URL.createObjectURL(await response.blob());
+      previewUrlRef.current = url;
+      setPreviewUrl(url);
+    } catch {
+      setPreviewError("확인 필요: 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
   // 조회 버튼을 눌렀을 때: 입력값을 검사하고, 통과하면 조회 API를 부른다.
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = cif.trim();
-    // 새로 조회하면 이전 결과와 선택은 지운다.
+    // 새로 조회하면 이전 결과와 선택, 미리보기는 지운다.
     setRecords(null);
     setSelectedIndex(null);
+    clearPreview();
 
     if (value === "") {
       setError("CIF를 입력해 주세요.");
@@ -88,14 +150,54 @@ export default function CifSearchForm() {
       </form>
 
       {records && (
-        <RecordList records={records} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+        <RecordList records={records} selectedIndex={selectedIndex} onSelect={handleSelect} />
       )}
 
-      {/* 임시 표시: 단위 6에서 선택한 건으로 별지를 만든다. */}
+      {/* 건을 고르면 미리보기를 만들 수 있다. */}
       {selected && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          선택한 건: {selected.institution} · {selected.round}
-        </p>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            선택한 건: {selected.institution} · {selected.round}
+          </p>
+
+          <button
+            type="button"
+            onClick={handlePreview}
+            disabled={previewLoading}
+            className="self-start rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-300 dark:hover:bg-blue-950"
+          >
+            {previewLoading ? "미리보기 만드는 중..." : "미리보기 만들기"}
+          </button>
+
+          {previewError && (
+            <p role="alert" className="text-sm text-red-600">
+              {previewError}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* 미리보기: 양도증서(1쪽)와 별지(2쪽)를 확인하고, 문제가 없으면 저장한다. */}
+      {previewUrl && (
+        <div className="flex flex-col gap-3">
+          <iframe
+            src={previewUrl}
+            title="양도증서 미리보기"
+            className="h-[70vh] w-full rounded-md border border-zinc-300 dark:border-zinc-700"
+          />
+          <button
+            type="button"
+            onClick={() => setNotice("저장 기능은 다음 단계(단위 9)에서 연결됩니다.")}
+            className="self-start rounded-md bg-blue-600 px-5 py-2 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            확인 후 저장
+          </button>
+          {notice && (
+            <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+              {notice}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
