@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# data files (personal info / source documents)
+*.xlsx
+*.jfif
+*.csv
+양도증서_pdf/
