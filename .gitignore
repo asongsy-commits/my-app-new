@@ -47,3 +47,4 @@ next-env.d.ts
 양도증서_pdf/
 원장/
 trash-can/
+*.pdf
