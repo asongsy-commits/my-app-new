@@ -17,7 +17,9 @@ export default function CifSearchForm() {
   const [previewUrl, setPreviewUrl] = useState(""); // 만들어진 PDF를 볼 수 있는 임시 주소
   const [previewLoading, setPreviewLoading] = useState(false); // PDF를 만드는 중인지
   const [previewError, setPreviewError] = useState(""); // PDF 만들기 실패 안내
-  const [notice, setNotice] = useState(""); // 확인 후 저장 버튼을 눌렀을 때의 안내
+  const [saving, setSaving] = useState(false); // 저장 중인지
+  const [notice, setNotice] = useState(""); // 저장 결과 안내 (성공 문구)
+  const [saveError, setSaveError] = useState(""); // 저장 실패 안내
   const previewUrlRef = useRef(""); // 화면을 떠날 때 임시 주소를 정리하기 위해 기억해 둔다.
 
   // 화면을 떠날 때 임시 PDF 주소를 정리한다.
@@ -34,6 +36,7 @@ export default function CifSearchForm() {
     setPreviewUrl("");
     setPreviewError("");
     setNotice("");
+    setSaveError("");
   }
 
   // 다른 건을 고르면 이전 미리보기는 지운다.
@@ -71,6 +74,37 @@ export default function CifSearchForm() {
       setPreviewError("확인 필요: 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setPreviewLoading(false);
+    }
+  }
+
+  // 미리보기를 확인한 뒤 "확인 후 저장"을 눌렀을 때: 결과 폴더에 PDF를 저장한다.
+  async function handleSave() {
+    if (records === null || selectedIndex === null) return;
+    const record = records[selectedIndex];
+    setNotice("");
+    setSaveError("");
+    setSaving(true);
+    try {
+      const response = await fetch("/api/transfer-pdf/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cif: record.cif,
+          round: record.round,
+          institution: record.institution,
+          loanType: record.loanType,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        setSaveError(data?.message ?? "확인 필요: 저장하지 못했습니다.");
+        return;
+      }
+      setNotice(`저장했습니다: ${data.fileName}`);
+    } catch {
+      setSaveError("확인 필요: 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -187,14 +221,20 @@ export default function CifSearchForm() {
           />
           <button
             type="button"
-            onClick={() => setNotice("저장 기능은 다음 단계(단위 9)에서 연결됩니다.")}
-            className="self-start rounded-md bg-blue-600 px-5 py-2 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            onClick={handleSave}
+            disabled={saving}
+            className="self-start rounded-md bg-blue-600 px-5 py-2 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            확인 후 저장
+            {saving ? "저장 중..." : "확인 후 저장"}
           </button>
           {notice && (
-            <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p role="status" className="text-sm text-green-700 dark:text-green-400">
               {notice}
+            </p>
+          )}
+          {saveError && (
+            <p role="alert" className="text-sm text-red-600">
+              {saveError}
             </p>
           )}
         </div>
