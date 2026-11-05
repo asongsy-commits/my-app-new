@@ -2,10 +2,15 @@
 // 사용법: POST /api/transfer-pdf  본문(JSON): { cif, round, institution, loanType }
 // 미리보기용이라 파일로 저장하지 않는다. (저장은 /api/transfer-pdf/save)
 
+import { rejectInUploadMode } from "@/lib/appMode";
 import { errorResponse, resolveRecord } from "@/lib/transferRequest";
 import { createTransferPdf } from "@/lib/transferPdf";
 
 export async function POST(request: Request) {
+  // 배포본 방식에서는 쓰지 않는다.
+  const blocked = rejectInUploadMode();
+  if (blocked) return blocked;
+
   // 1) 요청 검사와 건 찾기 (공용)
   const resolved = await resolveRecord(request);
   if ("response" in resolved) return resolved.response;

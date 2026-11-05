@@ -2,11 +2,16 @@
 // 사용법: POST /api/transfer-pdf/save  본문(JSON): { cif, round, institution, loanType }
 // 응답: { fileName } — 저장한 파일 이름 (결과 폴더는 data-config.json의 outputFolder)
 
+import { rejectInUploadMode } from "@/lib/appMode";
 import { FileExistsError, saveTransferPdf } from "@/lib/saveTransferPdf";
 import { createTransferPdf } from "@/lib/transferPdf";
 import { errorResponse, resolveRecord } from "@/lib/transferRequest";
 
 export async function POST(request: Request) {
+  // 배포본 방식에서는 쓰지 않는다.
+  const blocked = rejectInUploadMode();
+  if (blocked) return blocked;
+
   // 1) 요청 검사와 건 찾기 (미리보기와 같은 규칙)
   const resolved = await resolveRecord(request);
   if ("response" in resolved) return resolved.response;

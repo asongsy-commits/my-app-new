@@ -4,9 +4,14 @@
 // 개인정보 규칙: 주민번호는 원장에서 읽지 않으므로 응답에도 없다.
 // 값이 없거나 비어 있으면 추측하지 않고 "확인 필요" 안내를 돌려준다.
 
+import { rejectInUploadMode } from "@/lib/appMode";
 import { findByCif, findMissingFields, loadLedger } from "@/lib/ledger";
 
 export async function GET(request: Request) {
+  // 배포본 방식에서는 쓰지 않는다.
+  const blocked = rejectInUploadMode();
+  if (blocked) return blocked;
+
   const cif = (new URL(request.url).searchParams.get("cif") ?? "").trim();
 
   // 1) 입력값 검사: 비었거나 숫자가 아니면 조회하지 않는다.
