@@ -188,3 +188,34 @@ export async function loadLedger(
 
   return records;
 }
+
+// ---- 개발 단위 4: CIF로 건 찾기 ----
+
+// 화면에 보여 줄 열 이름 (값이 비었을 때 어느 항목인지 알려 주기 위함)
+const FIELD_LABELS: Record<keyof Omit<LedgerRecord, "cif">, string> = {
+  name: "성명",
+  round: "인수회차",
+  institution: "금융기관",
+  loanType: "대출과목",
+  balance: "대출잔액",
+  firstLoanDate: "최초대출일",
+  accruedInterest: "미수이자",
+  overdueInterest: "연체이자",
+  total: "합계",
+  address: "주소",
+};
+
+// 입력한 CIF와 일치하는 건만 골라 돌려준다. (없으면 빈 목록)
+export function findByCif(records: LedgerRecord[], cif: string): LedgerRecord[] {
+  return records.filter((r) => r.cif === cif);
+}
+
+// 값이 비어 있는 항목의 이름을 돌려준다. 비어 있는 것이 없으면 빈 목록이다.
+export function findMissingFields(record: LedgerRecord): string[] {
+  const missing: string[] = [];
+  for (const key of Object.keys(FIELD_LABELS) as (keyof typeof FIELD_LABELS)[]) {
+    const value = record[key];
+    if (value === null || value === "") missing.push(FIELD_LABELS[key]);
+  }
+  return missing;
+}
