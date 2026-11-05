@@ -1,5 +1,6 @@
 import CifSearchForm from "@/app/ui/cif-search-form";
 import DemoBanner from "@/app/ui/demo-banner";
+import UploadWorkspace from "@/app/ui/upload-workspace";
 import { isUploadMode } from "@/lib/appMode";
 
 // 첫 화면: CIF를 입력해 양도증서 작성을 시작한다.
@@ -16,14 +17,8 @@ export default function Home() {
         </p>
       </header>
 
-      {isUploadMode ? (
-        // TODO(단위 15): 엑셀 원장·보강 CSV·양식 이미지를 올리는 화면으로 바꾼다.
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          파일 올리기 화면을 준비 중입니다.
-        </p>
-      ) : (
-        <CifSearchForm />
-      )}
+      {/* 배포본 방식은 파일을 올려서 쓰고, 내 컴퓨터 방식은 고정 폴더에서 읽는다. */}
+      {isUploadMode ? <UploadWorkspace /> : <CifSearchForm />}
     </main>
   );
 }
