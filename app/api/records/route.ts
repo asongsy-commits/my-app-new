@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     // 서버 로그에는 원인만 남기고(고객 정보는 남기지 않는다), 화면에는 일반 안내만 보낸다.
     console.error("원장 읽기 실패:", error instanceof Error ? error.message : error);
     return Response.json(
-      { message: "확인 필요: 원장을 읽지 못했습니다. 설정 파일과 원장 파일을 확인해 주세요." },
+      { message: "확인 필요: 원장을 읽지 못했습니다. 프로젝트를 옮겼다면 원장/ 폴더도 함께 옮겼는지, data-config.json의 파일 이름이 맞는지 확인해 주세요." },
       { status: 500 }
     );
   }

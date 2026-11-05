@@ -31,6 +31,6 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.startsWith("확인 필요:")) {
       return Response.json({ message: error.message }, { status: 422 });
     }
-    return errorResponse("PDF를 만들지 못했습니다. 설정과 양식 파일을 확인해 주세요.", 500);
+    return errorResponse("PDF를 만들지 못했습니다. 양도증서_pdf/ 폴더의 양식 파일과 fonts/ 폴더의 글꼴 파일이 있는지 확인해 주세요.", 500);
   }
 }

@@ -33,6 +33,6 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.startsWith("확인 필요:")) {
       return Response.json({ message: error.message }, { status: 422 });
     }
-    return errorResponse("PDF를 저장하지 못했습니다. 결과 폴더와 설정을 확인해 주세요.", 500);
+    return errorResponse("PDF를 저장하지 못했습니다. 양도증서_pdf/ 폴더의 양식 파일, fonts/ 폴더의 글꼴 파일, 결과 폴더(양도증서_pdf/결과)를 확인해 주세요.", 500);
   }
 }
