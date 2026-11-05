@@ -9,7 +9,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { loadConfig, type ResolvedConfig } from "./config";
-import type { LedgerRecord } from "./ledger";
+import { makeFileName } from "./fileName";
+import type { LedgerRecord } from "./ledgerCore";
+
+// 기존 코드가 이 파일에서 가져다 쓸 수 있도록 다시 내보낸다.
+export { makeFileName } from "./fileName";
 
 // 같은 이름의 파일이 이미 있을 때 던지는 오류
 export class FileExistsError extends Error {
@@ -18,21 +22,6 @@ export class FileExistsError extends Error {
   }
 }
 
-// 파일 이름에 쓸 수 없는 글자(\ / : * ? " < > |)와 공백은 밑줄로 바꾼다.
-function toSafeName(text: string): string {
-  return text.replace(/[\\/:*?"<>|\s]+/g, "_");
-}
-
-// 오늘 날짜를 한국 시간 기준으로 YYYYMMDD 형태로 돌려준다.
-function todayText(now: Date = new Date()): string {
-  return now.toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }).replaceAll("-", "");
-}
-
-// 저장할 파일 이름을 만든다. (예: 10000182_1차_미래캐피탈_20261105.pdf)
-export function makeFileName(record: LedgerRecord, now: Date = new Date()): string {
-  const parts = [record.cif, record.round, record.institution, todayText(now)];
-  return `${parts.map(toSafeName).join("_")}.pdf`;
-}
 
 // PDF를 결과 폴더에 저장하고, 저장한 파일 이름을 돌려준다.
 export async function saveTransferPdf(
