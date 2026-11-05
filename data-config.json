@@ -1,0 +1,8 @@
+{
+  "ledgerFolder": "원장",
+  "ledgerFile": "20261105_가상_대출데이터.xlsx",
+  "supplementFile": "20261105_가상_대출데이터_보강.csv",
+  "pdfFolder": "양도증서_pdf",
+  "formFile": "양도증서_양식.jfif",
+  "outputFolder": "양도증서_pdf/결과"
+}

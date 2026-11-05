@@ -45,3 +45,4 @@ next-env.d.ts
 *.jfif
 *.csv
 양도증서_pdf/
+원장/
