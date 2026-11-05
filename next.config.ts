@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   // (원장·양식·결과 폴더는 개인정보라 GitHub에 없으므로 여기에 넣지 않는다.)
   outputFileTracingIncludes: {
     "/api/records": ["./data-config.json"],
+    "/api/font": ["./fonts/NotoSansKR-Regular.otf"],
     "/api/transfer-pdf": ["./data-config.json", "./fonts/NotoSansKR-Regular.otf"],
     "/api/transfer-pdf/save": ["./data-config.json", "./fonts/NotoSansKR-Regular.otf"],
   },

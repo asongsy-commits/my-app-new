@@ -1,12 +1,19 @@
 "use client";
 
-// 개발 단위 3·4·5: CIF 입력 → 조회 → 건 목록에서 1건 선택
+// 개발 단위 3·4·5·16: CIF 입력 → 조회 → 건 목록에서 1건 선택 → 미리보기 → 저장
 // 입력값 검사와 버튼 동작이 필요해서 클라이언트 컴포넌트로 만든다.
+//
+// 조회·미리보기·저장을 어디서 처리하는지는 source가 정한다.
+// - 내 컴퓨터 방식(기본): 서버 API (serverSource)
+// - 배포본 방식: 올린 파일로 브라우저 안에서 처리 (browser-source.ts)
 
 import { useEffect, useRef, useState } from "react";
+import { messageOf, serverSource, type DataSource } from "@/app/ui/data-source";
 import RecordList, { type RecordItem } from "@/app/ui/record-list";
 
-export default function CifSearchForm() {
+type Props = { source?: DataSource };
+
+export default function CifSearchForm({ source = serverSource }: Props) {
   const [cif, setCif] = useState(""); // 입력 칸의 값
   const [error, setError] = useState(""); // 입력·조회 오류 안내 문구
   const [loading, setLoading] = useState(false); // 조회 중인지
@@ -52,26 +59,11 @@ export default function CifSearchForm() {
     clearPreview();
     setPreviewLoading(true);
     try {
-      const response = await fetch("/api/transfer-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cif: record.cif,
-          round: record.round,
-          institution: record.institution,
-          loanType: record.loanType,
-        }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        setPreviewError(data?.message ?? "확인 필요: 미리보기를 만들지 못했습니다.");
-        return;
-      }
-      const url = URL.createObjectURL(await response.blob());
+      const url = URL.createObjectURL(await source.createPreview(record));
       previewUrlRef.current = url;
       setPreviewUrl(url);
-    } catch {
-      setPreviewError("확인 필요: 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    } catch (e) {
+      setPreviewError(messageOf(e, "확인 필요: 미리보기를 만들지 못했습니다."));
     } finally {
       setPreviewLoading(false);
     }
@@ -85,24 +77,9 @@ export default function CifSearchForm() {
     setSaveError("");
     setSaving(true);
     try {
-      const response = await fetch("/api/transfer-pdf/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cif: record.cif,
-          round: record.round,
-          institution: record.institution,
-          loanType: record.loanType,
-        }),
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) {
-        setSaveError(data?.message ?? "확인 필요: 저장하지 못했습니다.");
-        return;
-      }
-      setNotice(`저장했습니다: ${data.fileName}`);
-    } catch {
-      setSaveError("확인 필요: 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setNotice(await source.save(record));
+    } catch (e) {
+      setSaveError(messageOf(e, "확인 필요: 저장하지 못했습니다."));
     } finally {
       setSaving(false);
     }
@@ -129,17 +106,9 @@ export default function CifSearchForm() {
     setError("");
     setLoading(true);
     try {
-      const response = await fetch(`/api/records?cif=${encodeURIComponent(value)}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        // 서버가 보낸 "확인 필요" 안내를 그대로 보여 준다.
-        setError(data.message ?? "확인 필요: 조회에 실패했습니다.");
-        return;
-      }
-      setRecords(data.records as RecordItem[]);
-    } catch {
-      setError("확인 필요: 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setRecords(await source.lookup(value));
+    } catch (e) {
+      setError(messageOf(e, "확인 필요: 조회에 실패했습니다."));
     } finally {
       setLoading(false);
     }
