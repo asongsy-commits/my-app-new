@@ -12,8 +12,8 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { findMissingFields, type LedgerRecord } from "./ledger";
 
-// 한글 글꼴(Noto Sans KR, 오픈 라이선스) 위치
-const FONT_PATH = path.join(process.cwd(), "fonts", "NotoSansKR.ttf");
+// 한글 글꼴(Noto Sans KR Regular, 굵기 고정, 오픈 라이선스) 위치
+const FONT_PATH = path.join(process.cwd(), "fonts", "NotoSansKR-Regular.otf");
 
 // A4 크기(포인트 단위)와 여백
 const PAGE_WIDTH = 595.28;
@@ -25,22 +25,16 @@ function won(value: number | null): string {
   return (value ?? 0).toLocaleString("ko-KR");
 }
 
-// 일반 공백(스페이스)을 전각 공백(U+3000)으로 바꾼다.
-// 이 글꼴은 일반 공백이 PDF 글자 층에서 '堺'로 저장돼 복사·검색하면 글자가 깨진다.
-// 전각 공백은 제대로 저장되고 화면에서 보이는 모양도 같다.
-const sp = (text: string) => text.replace(/ /g, "　");
-
 // 글자가 칸보다 길면 글자 크기를 줄여서 칸 안에 맞춘다.
 function drawFitted(
   page: PDFPage,
   font: PDFFont,
-  rawText: string,
+  text: string,
   x: number,
   y: number,
   maxWidth: number,
   size: number
 ) {
-  const text = sp(rawText);
   let fontSize = size;
   while (fontSize > 6 && font.widthOfTextAtSize(text, fontSize) > maxWidth) fontSize -= 0.5;
   page.drawText(text, { x, y, size: fontSize, font, color: rgb(0, 0, 0) });
@@ -54,21 +48,21 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
     throw new Error(`확인 필요: 비어 있는 항목이 있어 별지를 만들 수 없습니다. (${missing.join(", ")})`);
   }
   if (!fs.existsSync(FONT_PATH)) {
-    throw new Error("한글 글꼴 파일을 찾을 수 없습니다: fonts/NotoSansKR.ttf");
+    throw new Error("한글 글꼴 파일을 찾을 수 없습니다: fonts/NotoSansKR-Regular.otf");
   }
 
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
-  // subset: false — 글꼴 전체를 PDF에 넣는다. (PDF 1개가 약 5MB)
-  // 쓰는 글자만 담는 subset: true로 하면 이 가변(variable) 글꼴에서는 글자가 빠져 보인다.
-  // TODO: 크기를 줄이려면 고정(static) 글꼴로 바꾼 뒤 subset: true를 쓴다.
-  const font = await pdf.embedFont(fs.readFileSync(FONT_PATH), { subset: false });
+  // subset: true — 쓰는 글자만 PDF에 담아 용량을 줄인다. (별지 약 수십 KB)
+  // 주의: subset: false로 글꼴 전체를 넣으면 띄어쓰기가 PDF 글자 층에서 '堺'로 저장돼
+  // 복사·검색할 때 글자가 깨진다. 반드시 true로 둔다.
+  const font = await pdf.embedFont(fs.readFileSync(FONT_PATH), { subset: true });
   const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const contentWidth = PAGE_WIDTH - MARGIN * 2;
   const black = rgb(0, 0, 0);
 
   // 제목
-  const title = sp("별 지");
+  const title = "별 지";
   const titleSize = 22;
   page.drawText(title, {
     x: (PAGE_WIDTH - font.widthOfTextAtSize(title, titleSize)) / 2,
@@ -77,7 +71,7 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
     font,
     color: black,
   });
-  const subtitle = sp("양도채권의 명세");
+  const subtitle = "양도채권의 명세";
   page.drawText(subtitle, {
     x: (PAGE_WIDTH - font.widthOfTextAtSize(subtitle, 13)) / 2,
     y: PAGE_HEIGHT - MARGIN - 46,
@@ -93,12 +87,12 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
   page.drawText("채무자", { x: labelX, y, size: 12, font, color: black });
   drawFitted(page, font, record.name, valueX, y, contentWidth - 70, 12);
   y -= 24;
-  page.drawText(sp("주 소"), { x: labelX, y, size: 12, font, color: black });
+  page.drawText("주 소", { x: labelX, y, size: 12, font, color: black });
   drawFitted(page, font, record.address ?? "", valueX, y, contentWidth - 70, 12);
 
   // 단위 표시
   y -= 36;
-  const unit = sp("(단위: 원)");
+  const unit = "(단위: 원)";
   page.drawText(unit, {
     x: MARGIN + contentWidth - font.widthOfTextAtSize(unit, 10),
     y,
@@ -147,7 +141,7 @@ export async function createAppendixPdf(record: LedgerRecord): Promise<Uint8Arra
       });
     }
     const textY = rowTop - rowHeight / 2 - 4;
-    page.drawText(sp(label), { x: MARGIN + 12, y: textY, size: 12, font, color: black });
+    page.drawText(label, { x: MARGIN + 12, y: textY, size: 12, font, color: black });
 
     // 금액은 오른쪽 맞춤, 글자는 왼쪽 맞춤
     const isAmount = /^[\d,]+$/.test(value);
